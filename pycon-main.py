@@ -4,6 +4,8 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
+import asyncio
+from datetime import datetime, timedelta
 from random import sample, shuffle
 
 
@@ -20,7 +22,6 @@ CAPTCHA_EMOJIS = [
     "ROLL_OF_PAPER",
     "SPOON",
     "CUSTARD",
-    "SPIDER",
     "SNAIL",
     "BEER_MUG",
     "COFFIN",
@@ -74,57 +75,126 @@ async def welcome(client, message):
 
     captcha = [e for e in sample(list_of_emojis, 3)]
 
-    captcha_text = " ".join(captcha)
+    captcha_text = "      ".join(captcha)
 
     message_to_reply = await message.reply(
-        f"{message_text}\n{captcha_text}",
+        f"{message_text}\n\n\n{captcha_text}",
         reply_markup=InlineKeyboardMarkup(
             [
                 [
                     InlineKeyboardButton(
                         list_of_emojis[0],
-                        callback_data=f"{list_of_emojis[0]}.{user_id}",
+                        callback_data=f"{list_of_emojis[0]}.captcha",
                     ),
                     InlineKeyboardButton(
                         list_of_emojis[1],
-                        callback_data=f"{list_of_emojis[1]}.{user_id}",
+                        callback_data=f"{list_of_emojis[1]}.captcha",
                     ),
                     InlineKeyboardButton(
                         list_of_emojis[2],
-                        callback_data=f"{list_of_emojis[2]}.{user_id}",
+                        callback_data=f"{list_of_emojis[2]}.captcha",
                     ),
                 ],
                 [
                     InlineKeyboardButton(
                         list_of_emojis[3],
-                        callback_data=f"{list_of_emojis[3]}.{user_id}",
+                        callback_data=f"{list_of_emojis[3]}.captcha",
                     ),
                     InlineKeyboardButton(
                         list_of_emojis[4],
-                        callback_data=f"{list_of_emojis[4]}.{user_id}",
+                        callback_data=f"{list_of_emojis[4]}.captcha",
                     ),
                     InlineKeyboardButton(
                         list_of_emojis[5],
-                        callback_data=f"{list_of_emojis[5]}.{user_id}",
+                        callback_data=f"{list_of_emojis[5]}.captcha",
                     ),
                 ],
                 [
                     InlineKeyboardButton(
                         list_of_emojis[6],
-                        callback_data=f"{list_of_emojis[6]}.{user_id}",
+                        callback_data=f"{list_of_emojis[6]}.captcha",
                     ),
                     InlineKeyboardButton(
                         list_of_emojis[7],
-                        callback_data=f"{list_of_emojis[7]}.{user_id}",
+                        callback_data=f"{list_of_emojis[7]}.captcha",
                     ),
                     InlineKeyboardButton(
                         list_of_emojis[8],
-                        callback_data=f"{list_of_emojis[8]}.{user_id}",
+                        callback_data=f"{list_of_emojis[8]}.captcha",
                     ),
                 ],
             ]
         ),
     )
 
+
+captcha_checker = set()  # will confirm our captcha
+number_of_tries = 0  # kick user if it reaches 3
+
+
+@app.on_callback_query(filters.regex(r"captcha"))
+async def captcha_function(client, query):
+
+    global captcha_checker, number_of_tries
+
+    replier = query.from_user.id  # one who answered the captcha
+    target = query.message.entities[0].user.id  # target of the captcha
+
+    emoji_response = query.data.split(".")[0]
+
+    if replier != target:
+        await query.answer("This message is not for you!", show_alert=True)
+        return
+    if emoji_response in captcha:
+        captcha_checker.add(emoji_response)
+        await query.answer(text="Correct!", cache_time=1)
+        if len(captcha_checker) == len(captcha):
+            new_welcome_message = await query.edit_message_text(
+                f"Welcome to Pycon Tanzania [{query.from_user.first_name}](tg://user?id={target})"
+            )
+            await client.restrict_chat_member(
+                query.message.chat.id,
+                target,
+                ChatPermissions(
+                    can_send_messages=True,
+                    can_send_media_messages=True,
+                    can_send_other_messages=True,
+                    can_add_web_page_previews=True,
+                    can_send_polls=True,
+                    can_change_info=True,
+                    can_invite_users=True,
+                    can_pin_messages=True,
+                ),
+            )
+            captcha_checker = set()
+            number_of_tries = 0
+            await asyncio.sleep(30)
+            await new_welcome_message.delete()
+
+    elif number_of_tries == 2:
+        await query.answer("You have been banned for 30 seconds", show_alert=True)
+        await asyncio.sleep(5)
+        kicker = await client.ban_chat_member(
+            query.message.chat.id,
+            target,
+            datetime.now() + timedelta(seconds=60),  # Kick user from chat for a minute
+        )
+        await kicker.delete()
+        await query.message.delete()
+
+        captcha_checker = set()
+        number_of_tries = 0
+
+    elif emoji_response not in captcha:
+        await query.answer(text="Wrong!", cache_time=1)
+        number_of_tries += 1
+
+
+@app.on_message(filters.left_chat_member)
+async def member_left_group(client, message):
+    await message.delete()
+
+
+#######################################
 
 app.run()
