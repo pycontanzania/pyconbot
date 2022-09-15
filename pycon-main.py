@@ -1,16 +1,43 @@
-from pyrogram import Client, emoji, filters
+from pyrogram import Client, emoji, filters, enums
 from pyrogram.types import (
+    Chat,
     ChatPermissions,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
+    Message,
 )
 import asyncio
 from datetime import datetime, timedelta
 from random import sample, shuffle
 
-
 app = Client("pycontzbot")
 
+########## HELPER FUNCTIONS ##########
+
+
+async def reply_and_delete(message, text):
+    await message.delete()
+    await message.reply(
+        text,
+        quote=False,
+        reply_to_message_id=getattr(message.reply_to_message, "message_id", None),
+        disable_web_page_preview=True,
+    )
+
+
+async def check_admin_filter(_, client: Client, message: Message):
+    user = await client.get_chat_member(
+        chat_id=message.chat, user_id=message.from_user.id
+    )
+    return bool(
+        user.status == enums.ChatMemberStatus.OWNER
+        or user.status == enums.ChatMemberStatus.ADMINISTRATOR
+    )
+
+
+# Create a custom filter to check for Admin Status
+
+check_admin = filters.create(check_admin_filter)
 
 ########## CAPTCHA AND WELCOME MESSAGE ##########
 
@@ -195,6 +222,6 @@ async def member_left_group(client, message):
     await message.delete()
 
 
-#######################################
+##########
 
 app.run()
