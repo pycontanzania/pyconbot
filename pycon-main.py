@@ -146,16 +146,12 @@ async def welcome(client, message):
 
 captcha_checker = set()  # will confirm our captcha
 number_of_tries = 0  # kick user if it reaches 3
-WELCOME_MESSAGE_ID = 0
 
 
 @app.on_callback_query(filters.regex(r"captcha"))
 async def captcha_function(client: Client, query):
 
-    global captcha_checker, number_of_tries, WELCOME_MESSAGE_ID
-
-    if WELCOME_MESSAGE_ID != 0:
-        await client.delete_messages(query.message.chat.id, WELCOME_MESSAGE_ID)
+    global captcha_checker, number_of_tries
 
     replier = query.from_user.id  # one who answered the captcha
     target = query.message.entities[0].user.id  # target of the captcha
@@ -198,7 +194,6 @@ async def captcha_function(client: Client, query):
             )
             captcha_checker = set()
             number_of_tries = 0
-            WELCOME_MESSAGE_ID = query.message.id
 
     elif number_of_tries == 2:
         await query.answer("You have been banned for 60 seconds", show_alert=True)
@@ -300,7 +295,7 @@ RULES = """
  • Business advertisements without proper authorization will lead to a ban
 
  • Any Forex, Crypto, Trading and related content will lead to a ban
- 
+
  • Disrespect will not be tolerated in the group chat
 
 """
