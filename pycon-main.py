@@ -1,5 +1,6 @@
 from pyrogram import Client, emoji, filters, enums
 from pyrogram.types import (
+    CallbackQuery,
     Chat,
     ChatPermissions,
     InlineKeyboardMarkup,
@@ -12,30 +13,18 @@ from random import sample, shuffle
 
 app = Client("pycontzbot")
 
-########## HELPER FUNCTIONS ##########
-
-
-async def reply_and_delete(message, text):
-    await message.delete()
-    await message.reply(
-        text,
-        quote=False,
-        reply_to_message_id=getattr(message.reply_to_message, "message_id", None),
-        disable_web_page_preview=True,
-    )
+########## CUSTOM FILTER TO IDENTIFY ADMINS ##########
 
 
 async def check_admin_filter(_, client: Client, message: Message):
     user = await client.get_chat_member(
-        chat_id=message.chat, user_id=message.from_user.id
+        chat_id=message.chat.id, user_id=message.from_user.id
     )
     return bool(
         user.status == enums.ChatMemberStatus.OWNER
         or user.status == enums.ChatMemberStatus.ADMINISTRATOR
     )
 
-
-# Create a custom filter to check for Admin Status
 
 check_admin = filters.create(check_admin_filter)
 
@@ -199,7 +188,7 @@ async def captcha_function(client, query):
             await new_welcome_message.delete()
 
     elif number_of_tries == 2:
-        await query.answer("You have been banned for 30 seconds", show_alert=True)
+        await query.answer("You have been banned for 60 seconds", show_alert=True)
         await asyncio.sleep(5)
         kicker = await client.ban_chat_member(
             query.message.chat.id,
@@ -222,6 +211,209 @@ async def member_left_group(client, message):
     await message.delete()
 
 
-##########
+########## RULES AND CoC ##########
+
+
+@app.on_message(
+    filters.command(commands="rules", prefixes=["/", "#", "!"], case_sensitive=False)
+)
+async def rules(client, message: Message):
+    await message.reply(text="These are the Rules of the Group:")  # Will be added
+
+
+########## HELP COMMAND ##########
+
+
+@app.on_message(
+    filters.command(commands="help", prefixes=["/", "#", "!"], case_sensitive=False)
+)
+async def rules(client, message: Message):
+    await message.reply(
+        text="""Here is a list of available commands:
+
+`/rules`: To get Rules of the groupchat
+
+**ADMIN COMMANDS:**
+
+`/mute`: To mute an individual
+
+`/ban`: To ban an individual
+
+`/delete`: To delete a message
+
+`/promote`: To promote someone to adminship
+"""
+    )
+
+
+########## MUTE COMMAND ##########
+
+
+@app.on_message(
+    filters.command(commands="mute", prefixes=["!", "/", "#"]) & check_admin
+)
+async def mute(client: Client, message: Message):
+
+    if not message.reply_to_message:
+        return
+
+    user = await client.get_chat_member(
+        chat_id=message.chat.id, user_id=message.reply_to_message.from_user.id
+    )
+
+    if (
+        user.status == enums.ChatMemberStatus.OWNER
+        or user.status == enums.ChatMemberStatus.ADMINISTRATOR
+    ):
+        message_to_reply = await message.reply(text="Cannot Mute Admins")
+        await asyncio.sleep(5)
+        await message_to_reply.delete()
+        await message.reply_to_message.delete()
+        return
+
+    await message.reply_to_message.delete()
+    await client.restrict_chat_member(
+        message.chat.id,
+        message.reply_to_message.from_user.id,
+        ChatPermissions(),
+        datetime.now() + timedelta(hours=6),
+    )
+    await message.reply(
+        text=f"[{message.reply_to_message.from_user.first_name}](tg://user?id={message.reply_to_message.from_user.id}) has been muted for 6 hours.",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Unmute", f"unmute.{message.reply_to_message.from_user.id}"
+                    )
+                ]
+            ]
+        ),
+    )
+
+
+@app.on_callback_query(filters.regex(r"unmute"))
+async def unmute(client: Client, query: CallbackQuery):
+
+    to_be_unmuted = query.data.split(".")[1]
+    text = query.message.text
+
+    user = await client.get_chat_member(
+        chat_id=query.message.chat.id, user_id=query.from_user.id
+    )
+
+    if not (
+        user.status == enums.ChatMemberStatus.OWNER
+        or user.status == enums.ChatMemberStatus.ADMINISTRATOR
+    ):
+        await query.answer("Only admins can perform this action", show_alert=True)
+        return
+
+    await client.restrict_chat_member(
+        query.message.chat.id,
+        to_be_unmuted,
+        ChatPermissions(
+            can_send_messages=True,
+            can_send_media_messages=True,
+            can_send_other_messages=True,
+            can_add_web_page_previews=True,
+            can_send_polls=True,
+            can_change_info=True,
+            can_invite_users=True,
+            can_pin_messages=True,
+        ),
+    )
+
+    await query.edit_message_text(f"~~{text.markdown}~~\n\nYou have been Unmuted")
+
+
+######## BAN COMMAND ########
+
+
+@app.on_message(filters.command(commands="ban", prefixes=["!", "/", "#"]) & check_admin)
+async def ban(client: Client, message: Message):
+
+    if not message.reply_to_message:
+        return
+
+    user = await client.get_chat_member(
+        chat_id=message.chat.id, user_id=message.reply_to_message.from_user.id
+    )
+
+    if (
+        user.status == enums.ChatMemberStatus.OWNER
+        or user.status == enums.ChatMemberStatus.ADMINISTRATOR
+    ):
+        message_to_reply = await message.reply(text="Cannot Ban Admins")
+        await asyncio.sleep(5)
+        await message_to_reply.delete()
+        await message.delete()
+        return
+
+    await client.ban_chat_member(message.chat.id, message.reply_to_message.from_user.id)
+    await message.reply_to_message.delete()
+    await message.reply(
+        text=f"[{message.reply_to_message.from_user.first_name}](tg://user?id={message.reply_to_message.from_user.id}) has been permanently banned.",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Unban", f"unban.{message.reply_to_message.from_user.id}"
+                    )
+                ]
+            ]
+        ),
+    )
+
+
+@app.on_callback_query(filters.regex(r"unban"))
+async def unban(client: Client, query: CallbackQuery):
+
+    to_be_unbanned = query.data.split(".")[1]
+    text = query.message.text
+
+    user = await client.get_chat_member(
+        chat_id=query.message.chat.id, user_id=query.from_user.id
+    )
+
+    if not (
+        user.status == enums.ChatMemberStatus.OWNER
+        or user.status == enums.ChatMemberStatus.ADMINISTRATOR
+    ):
+        await query.answer("Only admins can perform this action", show_alert=True)
+        return
+
+    await client.unban_chat_member(query.message.chat.id, to_be_unbanned)
+
+    await query.edit_message_text(f"~~{text.markdown}~~\n\nYou have been Unbanned")
+
+
+########## PROMOTE ADMIN ##########
+@app.on_message(
+    filters.command(commands="promote", prefixes=["!", "/", "#"]) & check_admin
+)
+async def promote(client: Client, message: Message):
+
+    to_be_promoted = message.reply_to_message.from_user.id
+    chat_id = message.chat.id
+
+    await client.promote_chat_member(chat_id, to_be_promoted)
+    await message.reply(
+        f"Promoted [{message.reply_to_message.from_user.first_name}](tg://user?id={to_be_promoted})"
+    )
+
+
+########## DELETE MESSAGES ##########
+@app.on_message(
+    filters.command(commands="delete", prefixes=["!", "/", "#"]) & check_admin
+)
+async def delete_a_message(client: Client, message: Message):
+
+    if not message.reply_to_message:
+        await message.delete()
+        return
+    await message.delete()
+    await message.reply_to_message.delete()
+
 
 app.run()
