@@ -146,12 +146,16 @@ async def welcome(client, message):
 
 captcha_checker = set()  # will confirm our captcha
 number_of_tries = 0  # kick user if it reaches 3
+WELCOME_MESSAGE_ID = 0
 
 
 @app.on_callback_query(filters.regex(r"captcha"))
-async def captcha_function(client, query):
+async def captcha_function(client: Client, query):
 
-    global captcha_checker, number_of_tries
+    global captcha_checker, number_of_tries, WELCOME_MESSAGE_ID
+
+    if WELCOME_MESSAGE_ID != 0:
+        await client.delete_messages(query.message.chat.id, WELCOME_MESSAGE_ID)
 
     replier = query.from_user.id  # one who answered the captcha
     target = query.message.entities[0].user.id  # target of the captcha
@@ -166,7 +170,17 @@ async def captcha_function(client, query):
         await query.answer(text="Correct!", cache_time=1)
         if len(captcha_checker) == len(captcha):
             new_welcome_message = await query.edit_message_text(
-                f"Welcome to Pycon Tanzania [{query.from_user.first_name}](tg://user?id={target})"
+                f"Welcome to Pycon Tanzania [{query.from_user.first_name}](tg://user?id={target}).\n\nPlease Follow the Rules of the Groupchat. Click **`Help`** below for more information.",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "Help",
+                                callback_data=f"helpmenu",
+                            ),
+                        ]
+                    ]
+                ),
             )
             await client.restrict_chat_member(
                 query.message.chat.id,
@@ -184,8 +198,7 @@ async def captcha_function(client, query):
             )
             captcha_checker = set()
             number_of_tries = 0
-            await asyncio.sleep(30)
-            await new_welcome_message.delete()
+            WELCOME_MESSAGE_ID = query.message.id
 
     elif number_of_tries == 2:
         await query.answer("You have been banned for 60 seconds", show_alert=True)
@@ -211,38 +224,186 @@ async def member_left_group(client, message):
     await message.delete()
 
 
-########## RULES AND CoC ##########
-
-
-@app.on_message(
-    filters.command(commands="rules", prefixes=["/", "#", "!"], case_sensitive=False)
-)
-async def rules(client, message: Message):
-    await message.reply(text="These are the Rules of the Group:")  # Will be added
-
-
 ########## HELP COMMAND ##########
 
 
 @app.on_message(
     filters.command(commands="help", prefixes=["/", "#", "!"], case_sensitive=False)
 )
-async def rules(client, message: Message):
-    await message.reply(
-        text="""Here is a list of available commands:
+@app.on_callback_query(filters.regex(r"helpmenu"))
+async def help_menu_function(client, message):
 
-`/rules`: To get Rules of the groupchat
+    to_respond = "reply" if type(message) == Message else "edit_message_text"
 
-**ADMIN COMMANDS:**
+    if to_respond == "edit_message_text":
+        await message.answer()
+    if to_respond == "reply":
+        await message.delete()
 
-`/mute`: To mute an individual
+    await getattr(message, to_respond)(
+        text="Welcome To Pycon Tanzania",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Rules",
+                        callback_data="rules.helpresponse",
+                    ),
+                    InlineKeyboardButton(
+                        "About",
+                        callback_data="about.helpresponse",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Events",
+                        callback_data="events.helpresponse",
+                    ),
+                    InlineKeyboardButton(
+                        "Announcements",
+                        callback_data="announcements.helpresponse",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Resources",
+                        callback_data="resources.helpresponse",
+                    ),
+                    InlineKeyboardButton(
+                        "Administrator",
+                        callback_data="adminmenu",
+                    ),
+                ],
+            ]
+        ),
+    )
 
-`/ban`: To ban an individual
 
-`/delete`: To delete a message
+RESOURCES = """
+**Here are some good resources to learn Python:**
 
-`/promote`: To promote someone to adminship
+• [Official Tutorial](https://docs.python.org/3/tutorial/index.html) - Book
+• [Dive Into Python 3](https://www.diveinto.org/python3/table-of-contents.html) - Book
+• [Hitchhiker's Guide!](https://docs.python-guide.org) - Book
+• [Learn Python](https://www.learnpython.org/) - Interactive
+• [Project Python](http://projectpython.net) - Interactive
+• [Python Video Tutorials](https://www.youtube.com/playlist?list=PL-osiE80TeTt2d9bfVyTiXJA-UTHn6WwU) - Video
+• [MIT OpenCourseWare](http://ocw.mit.edu/6-0001F16) - Course
+• @PythonRes - Channel
 """
+
+RULES = """
+**Rules of the Group:**
+
+ • All conversations must be in English or Kiswahili
+
+ • Business advertisements without proper authorization will lead to a ban
+
+ • Any Forex, Crypto, Trading and related content will lead to a ban
+ 
+ • Disrespect will not be tolerated in the group chat
+
+"""
+
+HELP_SWITCHER = {
+    "rules": RULES,
+    "about": "A Community of Professionals, Entrepreneurs, Scientists & Students Collaborating to Innovate & Advance Python Language Usage. Contact secretariat@pycon.or.tz or visit our website: https://pycon.or.tz",
+    "events": "Our next Pycon Meeting will be in Zanzibar on Dec 2022. Stay tuned for updates",
+    "announcements": "There are no announcements at the moment",
+    "resources": RESOURCES,
+}
+
+
+@app.on_callback_query(filters.regex(r"helpresponse"))
+async def help_menu_response(client: Client, query: CallbackQuery):
+
+    queried = query.data.split(".")[0]
+    await query.answer()
+    await query.edit_message_text(
+        text=HELP_SWITCHER[queried],
+        disable_web_page_preview=True,
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Back To Menu",
+                        callback_data=f"helpmenu",
+                    ),
+                ]
+            ]
+        ),
+    )
+
+
+@app.on_callback_query(filters.regex(r"adminmenu"))
+async def admin_help_function(client: Client, query: CallbackQuery):
+
+    queried = query.data.split(".")[0]
+    await query.answer()
+    await query.edit_message_text(
+        text="Here are the Administrative Commands:",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Mute",
+                        callback_data="mute.adminresponse",
+                    ),
+                    InlineKeyboardButton(
+                        "Ban",
+                        callback_data="ban.adminresponse",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Delete",
+                        callback_data="delete.adminresponse",
+                    ),
+                    InlineKeyboardButton(
+                        "Promote",
+                        callback_data="promote.adminresponse",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Back To Menu",
+                        callback_data=f"helpmenu",
+                    ),
+                ],
+            ]
+        ),
+    )
+
+
+ADMIN_HELP_SWITCHER = {
+    "mute": "Respond to a chat with **`/mute`** to mute the sender",
+    "ban": "Respond to a chat with **`/ban`** to ban the sender",
+    "delete": "Respond to a chat with **`/delete`** to delete the message",
+    "promote": "Respond to a chat with **`/promote`** to give the sender admin privileges",
+}
+
+
+@app.on_callback_query(filters.regex(r"adminresponse"))
+async def admin_response_function(client: Client, query: CallbackQuery):
+
+    queried = query.data.split(".")[0]
+    await query.answer()
+    await query.edit_message_text(
+        text=ADMIN_HELP_SWITCHER[queried],
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Back",
+                        callback_data="adminmenu",
+                    ),
+                    InlineKeyboardButton(
+                        "Help Menu",
+                        callback_data="helpmenu",
+                    ),
+                ]
+            ]
+        ),
     )
 
 
@@ -268,7 +429,7 @@ async def mute(client: Client, message: Message):
         message_to_reply = await message.reply(text="Cannot Mute Admins")
         await asyncio.sleep(5)
         await message_to_reply.delete()
-        await message.reply_to_message.delete()
+        await message.delete()
         return
 
     await message.reply_to_message.delete()
@@ -398,9 +559,12 @@ async def promote(client: Client, message: Message):
     chat_id = message.chat.id
 
     await client.promote_chat_member(chat_id, to_be_promoted)
-    await message.reply(
+    message_to_reply = await message.reply(
         f"Promoted [{message.reply_to_message.from_user.first_name}](tg://user?id={to_be_promoted})"
     )
+    await asyncio.sleep(30)
+    await message_to_reply.delete()
+    await message.delete()
 
 
 ########## DELETE MESSAGES ##########
