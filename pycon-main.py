@@ -256,7 +256,7 @@ async def help_menu_function(client, message):
                     ),
                     InlineKeyboardButton(
                         "Announcements",
-                        callback_data="announcements.helpresponse",
+                        callback_data="announcementsmenu",
                     ),
                 ],
                 [
@@ -397,6 +397,347 @@ async def admin_response_function(client: Client, query: CallbackQuery):
                         callback_data="helpmenu",
                     ),
                 ]
+            ]
+        ),
+    )
+
+
+############ ANNOUNCEMENTS ##################
+
+
+@app.on_callback_query(filters.regex(r"announcementsmenu"))
+async def announcements_menu_function(client: Client, query: CallbackQuery):
+
+    await query.answer()
+    await query.edit_message_text(
+        text="PyCon Tanzania Starts on 5th December",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Topics",
+                        callback_data="topics",
+                    ),
+                    InlineKeyboardButton(
+                        "Speakers",
+                        callback_data="speakers",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Events",
+                        callback_data="events",
+                    ),
+                    InlineKeyboardButton(
+                        "Back To Menu",
+                        callback_data=f"helpmenu",
+                    ),
+                ],
+            ]
+        ),
+    )
+
+
+AllTopics = """
+*AI Transformers and Self-Attention*
+```by Isack Odero```
+
+*Analysing the Development of Cervical Cancer Using ML*
+```by Eng. Saida Nyasasi```
+
+*Explainability for Natural Language Processing*
+```by Antony Mipawa```
+
+*Fun Simple Python Programs*
+```by Monalisa Mbilinyi```
+
+*Geospatial Data Analysis Using Python*
+```by Khairiya Masoud```
+
+*NLP for African Languages and Building Chatbots with Sarufi*
+```by Antony Mipawa and Kalebu Gwalugano```
+
+*Network Analysis Made Simple Using NetworkX*
+```by Mridul Seth```
+
+*Poultry Disease Diagnosis with Deep Learning*
+```by Dr. Dina Machuve```
+
+*Predicting Fake News Using GCN*
+```by Zephania Reuben```
+
+*Programming Embedded IoT with Python*
+```by Mahir Nasor```
+
+*Python Language Foundation*
+```by Abubakar Omar and Joan Henry```
+
+*Python Web Development with Django*
+```by Lugano Ngulwa```
+
+*Species Determination of Malaria Vectors Using AI*
+```by Issa Mshani```
+
+*WebScrapping of Consumer Prices*
+```by Alban Manishimwe```
+
+*WebScrapping with Beautiful Soup*
+```by Nathaniel Mwaipopo```
+
+*Why is Data Science Necessary, Why Now?*
+```by Hassan Kibirige```
+"""
+
+
+@app.on_callback_query(filters.regex(r"topics"))
+async def topics(client: Client, query: CallbackQuery):
+
+    await query.answer()
+    await query.edit_message_text(
+        text=f"The following will be discussed:\n\n{AllTopics}",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Back",
+                        callback_data="announcementsmenu",
+                    ),
+                    InlineKeyboardButton(
+                        "Back To Menu",
+                        callback_data=f"helpmenu",
+                    ),
+                ],
+            ]
+        ),
+    )
+
+
+AllSpeakers = """
+*Abubakar Omar*
+```Python Teacher```
+
+*Alban Manishimwe*
+```Uganda Bureau of Statistics```
+
+*Antony Mipawa*
+```Software Developer Neurotech```
+
+*Dr. Dina Machuve*
+```Co-Founder DevData Analytics```
+
+*Eng. Saida Nyasasi*
+```ED & Researcher iSuite```
+
+*Hassan Kibirige*
+```Author of Plotnine Python Library```
+
+*Isack Odero*
+```Founder NileAGI```
+
+*Issa Mshani*
+```Research Scientist Ifakara Health Institute```
+
+*Joan Henry*
+```Software Developer```
+
+*Kalebu Gwalugano*
+```Founder Neurotech```
+
+*Khairiya Masoud*
+```State University of Zanzibar```
+
+*Lugano Ngulwa*
+```Software Developer```
+
+*Mahir Nasor*
+```Z TechHub Zanzibar```
+
+*Monalisa Mbilinyi*
+```Python Software Developer```
+
+*Mridul Seth*
+```Python Software Developer```
+
+*Nathaniel Mwaipopo*
+```Python Software Developer```
+
+*Zephania Reuben*
+"""
+
+
+@app.on_callback_query(filters.regex(r"speakers"))
+async def speakers(client: Client, query: CallbackQuery):
+
+    await query.answer()
+    await query.edit_message_text(
+        text=f"The following will be the our event speakers:\n\n{AllSpeakers}",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Back",
+                        callback_data="announcementsmenu",
+                    ),
+                    InlineKeyboardButton(
+                        "Back To Menu",
+                        callback_data=f"helpmenu",
+                    ),
+                ],
+            ]
+        ),
+    )
+
+
+AllEvents = """
+5th | December | 2022
+
+09:00-09:30: Opening Keynotes
+
+09:30-10:30: Loren Crary
+
+10:30-10:45: Break
+
+10:45-11:15: Foundations of Python Bootcamp
+
+11:15-11:45: Foundations of Python Bootcamp
+
+11:45-13:15: Lunch
+
+13:15-13:45: Django Web Development
+
+13:45-14:15: Django Web Development
+
+14:15-14:30: Break
+
+14:30-15:00: Network Analysis Made Simple Using NetworkX
+
+15:00-15:30: Network Analysis Made Simple Using NetworkX
+
+15:30-15:45: Break
+
+15:45-16:15: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+16:15-16:45: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+16:45-17:00: PyCon Social Event
+
+6th | December | 2022
+
+09:00-09:30: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+09:30-10:30: Tigo Hackathon
+
+10:30-10:45: Break
+
+10:45-11:15: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+11:15-11:45: Tigo Hackathon
+
+11:45-13:15: Lunch
+
+13:15-13:45: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+13:45-14:15: Tigo Hackathon
+
+14:15-14:30: Break
+
+14:30-15:00: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+15:00-15:30: Tigo Hackathon
+
+15:30-15:45: Break
+
+15:45-16:15: Hackathon - NLP for African Languages Building Chatbots with Sarufi
+
+16:15-16:45: Hackathon Birds of Feather (BOF)
+
+16:45-17:00: PyCon Social Event
+
+7th | December | 2022
+
+09:00-09:30: Why is Data Science Necessary, Why Now?
+
+09:30-10:30: Geospatial Data Analysis Using Python
+
+10:30-10:45: Break
+
+10:45-11:15: Species Determination of Malaria Vectors Using AI
+
+11:15-11:45: Python Development Tigo
+
+11:45-13:15: Lunch
+
+13:15-13:45: Analysing the Development of Cervical Cancer Using ML
+
+13:45-14:15: Explainability for Natural Language Processing
+
+14:15-14:30: Break
+
+14:30-15:00: Predicting Fake News Using GCN
+
+15:00-15:30: Poultry Disease Diagnosis with Deep Learning
+
+15:30-15:45: Break
+
+15:45-16:15: AI Transformers and Self-Attention
+
+16:15-16:45:  Panel Discussion on DS/ML/AI
+
+16:45-17:00: PyCon Social Event
+
+8th | December | 2022
+
+09:00-09:30: Fun Simple Python Programs
+
+09:30-10:30: Python Development Tigo
+
+10:30-10:45: Break
+
+10:45-11:15: Programming Embedded IoT with Python
+
+11:15-11:45: Python Web Development with Django
+
+11:45-13:15: Lunch
+
+13:15-13:45: WebScrapping of Consumer Prices
+
+13:45-14:15: Testing Smart Contracts with Pytest & Brownie
+
+14:15-14:30: Break
+
+14:30-15:00: WebScrapping with Beautiful Soup
+
+15:00-15:30: Lightening Talks Pyladies
+
+15:30-15:45: Break
+
+15:45-16:15: Lightening Talks Pyladies
+
+16:15-16:45: Business Analysis with AI. Inspiring Women in AI. Teaching Python To Learn Python.
+
+16:45-17:00: Closing Keynote, DG ICT Commission
+
+"""
+
+
+@app.on_callback_query(filters.regex(r"events"))
+async def events(client: Client, query: CallbackQuery):
+
+    await query.answer()
+    await query.edit_message_text(
+        text=f"Here's the events timetable:\n\n{AllEvents}",
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "Back",
+                        callback_data="announcementsmenu",
+                    ),
+                    InlineKeyboardButton(
+                        "Back To Menu",
+                        callback_data=f"helpmenu",
+                    ),
+                ],
             ]
         ),
     )
